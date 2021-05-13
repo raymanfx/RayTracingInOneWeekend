@@ -78,7 +78,13 @@ fn ray_color(ray: &Ray<f64>, world: &HittableList<f64>, depth: usize) -> Color {
         return Color::new(0.0, 0.0, 0.0);
     }
 
-    if let Some(rec) = world.is_hit(ray, 0.0, std::f64::MAX) {
+    // Fix shadow acne: due to floating point approximation, some of the reflected rays hit the
+    // object they are reflecting off of not at exactly t = 0, but e.g. t = -0.000001 or
+    // t = 0.000001. Ignore hits near zero to work around this.
+    let t_min = 0.001;
+    let t_max = std::f64::MAX;
+
+    if let Some(rec) = world.is_hit(ray, t_min, t_max) {
         // Diffuse reflection: send out a new ray from the hit position point pointing towards a
         // random direction inside the unit sphere tangent to that hit point.
         // Possible problem: the recursion depth may be too deep, so we blow up the stack. Avoid

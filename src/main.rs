@@ -7,6 +7,9 @@ use ppm::Image;
 mod vec3;
 use vec3::Vec3;
 
+mod ray;
+use ray::{Point3, Ray};
+
 /// RGB color with each channel ranging from 0.0 to 1.0
 type Color = Vec3<f64>;
 
@@ -18,10 +21,48 @@ fn write_color(color: &Color) {
     println!("{} {} {}", r, g, b);
 }
 
+/// Compute the color of the background.
+fn ray_color(ray: &Ray<f64>) -> Color {
+    // scale the ray direction to unit length (so -1.0 < y < 1.0)
+    let unit_direction = ray.direction().normalized();
+    // scale t so 0.0 <= t <= 1.0
+    let t = 0.5 * (unit_direction.y() + 1.0);
+    // linear blend aka interpolation between white and blue
+    let white = Color::new(1.0, 1.0, 1.0);
+    let blue = Color::new(0.5, 0.7, 1.0);
+    white * (1.0 - t) + blue * t
+}
+
 fn main() -> io::Result<()> {
     // Image settings
-    const IMAGE_WIDTH: usize = 256;
-    const IMAGE_HEIGHT: usize = 256;
+    const ASPECT_RATIO: f32 = 16.0 / 9.0;
+    const IMAGE_WIDTH: usize = 400;
+    const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f32 / ASPECT_RATIO) as usize;
+    eprintln!(">> Image: {} (W) x {} (H)", IMAGE_WIDTH, IMAGE_HEIGHT);
+
+    // Camera settings
+    const VIEWPORT_HEIGHT: f32 = 2.0;
+    const VIEWPORT_WIDTH: f32 = ASPECT_RATIO * VIEWPORT_HEIGHT;
+    const FOCAL_LENGTH: f32 = 1.0;
+    eprintln!(
+        ">> Viewport: {} (W) x {} (H) - focal: {}",
+        VIEWPORT_WIDTH, VIEWPORT_HEIGHT, FOCAL_LENGTH
+    );
+
+    // "eye" of the scene aka camera center
+    let origin = Point3::<f64>::new(0.0, 0.0, 0.0);
+    // right handed coordinate system: x axis is horizontal
+    let horizontal = Vec3::<f64>::new(VIEWPORT_WIDTH as f64, 0.0, 0.0);
+    // right handed coordinate system: y axis is vertical
+    let vertical = Vec3::<f64>::new(0.0, VIEWPORT_HEIGHT as f64, 0.0);
+    // do the following to get to the lower left corner:
+    //  1. go left as far as possible (half the viewport)
+    //  2. go down as far as possible (half the viewport)
+    //  3. move forward (negative z direction) so we lay flat on the surface
+    let lower_left_corner = origin
+        - horizontal / 2.0
+        - vertical / 2.0
+        - Vec3::<f64>::new(0.0, 0.0, FOCAL_LENGTH as f64);
 
     // create the image buffer
     let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, Color::new(0.0, 0.0, 0.0));
@@ -32,10 +73,11 @@ fn main() -> io::Result<()> {
         io::stdout().flush()?;
 
         for i in 0..img.width() {
-            let r = (i as f64) / ((img.width() - 1) as f64);
-            let g = (j as f64) / ((img.height() - 1) as f64);
-            let b = 0.25;
-            img[j][i] = Color::new(r, g, b);
+            let u = (i as f64) / ((img.width() - 1) as f64);
+            let v = (j as f64) / ((img.height() - 1) as f64);
+            let direction = lower_left_corner + horizontal * u + vertical * v - origin;
+            let ray = Ray::new(origin, direction);
+            img[j][i] = ray_color(&ray);
         }
     }
     eprintln!("\n>> Render done");

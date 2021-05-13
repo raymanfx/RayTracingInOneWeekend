@@ -26,21 +26,21 @@ type Color = Vec3<f64>;
 
 /// Transform color values from [0.0, 1.0] to [0, 255].
 fn write_color(color: &Color) {
-    let r = color.x();
-    let g = color.y();
-    let b = color.z();
+    let mut r = color.x();
+    let mut g = color.y();
+    let mut b = color.z();
 
     // clamp to [0.0, 1.0] range
-    let r = rtweekend::clamp(r, 0.0, 0.999);
-    let g = rtweekend::clamp(g, 0.0, 0.999);
-    let b = rtweekend::clamp(b, 0.0, 0.999);
+    r = rtweekend::clamp(r, 0.0, 0.999);
+    g = rtweekend::clamp(g, 0.0, 0.999);
+    b = rtweekend::clamp(b, 0.0, 0.999);
 
     // map to [0, 255] range
-    let r = (256 * r) as u8;
-    let g = (256 * g) as u8;
-    let b = (256 * b) as u8;
+    r = 256.0 * r;
+    g = 256.0 * g;
+    b = 256.0 * b;
 
-    println!("{} {} {}", r, g, b);
+    println!("{} {} {}", r as u8, g as u8, b as u8);
 }
 
 /// Compute the color of pixel hit by a ray.
@@ -70,6 +70,7 @@ fn main() -> io::Result<()> {
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
     const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
+    const SAMPLES_PER_PIXEL: usize = 100;
     eprintln!(">> Image: {} (W) x {} (H)", IMAGE_WIDTH, IMAGE_HEIGHT);
 
     // Camera settings
@@ -96,10 +97,22 @@ fn main() -> io::Result<()> {
         io::stdout().flush()?;
 
         for i in 0..img.width() {
-            let u = (i as f64) / ((img.width() - 1) as f64);
-            let v = (j as f64) / ((img.height() - 1) as f64);
-            let ray = camera.ray(u, v);
-            img[j][i] = ray_color(&ray, &world);
+            let mut color = Color::new(0.0, 0.0, 0.0);
+
+            // For each pixel, we send SAMPLES_PER_PIXEL number of rays and essentially average
+            // their color values to get a final pixel color.
+            for _ in 0..SAMPLES_PER_PIXEL {
+                let u = (i as f64 + rtweekend::random(0.0..1.0)) / ((img.width() - 1) as f64);
+                let v = (j as f64 + rtweekend::random(0.0..1.0)) / ((img.height() - 1) as f64);
+                let ray = camera.ray(u, v);
+                color = color + ray_color(&ray, &world);
+            }
+
+            // divide the color by the number of samples
+            let scale = 1.0 / SAMPLES_PER_PIXEL as f64;
+            color = color * scale;
+
+            img[j][i] = color;
         }
     }
     eprintln!("\n>> Render done");

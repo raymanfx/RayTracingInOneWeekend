@@ -1,3 +1,5 @@
+use std::cmp::PartialOrd;
+
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::Rng;
 
@@ -14,4 +16,15 @@ where
 {
     let mut rng = rand::thread_rng();
     rng.gen_range(range)
+}
+
+/// Clamp a value so it falls inside the given range
+pub fn clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
+    if x < min {
+        min
+    } else if x > max {
+        max
+    } else {
+        x
+    }
 }

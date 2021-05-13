@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use std::ops::{Add, Div, Index, IndexMut, Mul, Neg, Sub};
 
 /// A simple vector in 3D space.
 #[derive(Debug, Clone, Copy)]
@@ -28,6 +28,21 @@ impl<T: Copy> Index<usize> for Vec3<T> {
 impl<T: Copy> IndexMut<usize> for Vec3<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.e[index]
+    }
+}
+
+// -Vector
+
+impl<T: Copy> Neg for Vec3<T>
+where
+    T: Neg<Output = T>,
+{
+    type Output = Vec3<T>;
+
+    fn neg(self) -> Vec3<T> {
+        Vec3 {
+            e: [-self[0], -self[1], -self[2]],
+        }
     }
 }
 

@@ -30,7 +30,7 @@ fn write_color(color: &Color) {
 /// Compute the color of pixel hit by a ray.
 fn ray_color(ray: &Ray<f64>) -> Color {
     let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5);
-    if let Some(rec) = sphere.is_hit(ray, -999999999.0, 99999999999999.0) {
+    if let Some(rec) = sphere.is_hit(ray, -1.0, 1.0) {
         // assume the normal is a unit length vector in the range [-1.0, 1.0] and map it to the
         // [0.0, 1.0] range since we are going to interpret it as RGB
         return Color::new(

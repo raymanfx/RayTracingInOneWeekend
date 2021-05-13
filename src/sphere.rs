@@ -75,11 +75,7 @@ impl Hittable<f64> for Sphere<f64> {
 
         let point = ray.at(root);
         // outward surface normal is in the direction of the hit point minus the center
-        let normal = (point - self.center) / self.radius;
-        Some(HitRecord {
-            point,
-            normal,
-            t: root,
-        })
+        let outward_normal = (point - self.center) / self.radius;
+        Some(HitRecord::new(point, outward_normal, root, ray))
     }
 }

@@ -68,6 +68,7 @@ fn main() -> io::Result<()> {
     // World
     let mut world = HittableList::new();
     world.add(Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5));
+    world.add(Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0));
 
     // "eye" of the scene aka camera center
     let origin = Point3::<f64>::new(0.0, 0.0, 0.0);

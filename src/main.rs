@@ -35,7 +35,7 @@ fn main() -> io::Result<()> {
             let r = (i as f64) / ((img.width() - 1) as f64);
             let g = (j as f64) / ((img.height() - 1) as f64);
             let b = 0.25;
-            img[i][j] = Color::new(r, g, b);
+            img[j][i] = Color::new(r, g, b);
         }
     }
     eprintln!("\n>> Render done");
@@ -45,7 +45,7 @@ fn main() -> io::Result<()> {
     println!("{} {}", img.width(), img.height());
     println!("255");
     // print PPM data
-    for j in 0..img.height() {
+    for j in (0..img.height()).rev() {
         for i in 0..img.width() {
             let pix = img[j][i];
             write_color(&pix);

@@ -22,7 +22,7 @@ fn write_color(color: &Color) {
 }
 
 /// Check whether a sphere is hit by a ray.
-fn hit_sphere(center: &Point3<f64>, radius: f64, ray: &Ray<f64>) -> bool {
+fn hit_sphere(center: &Point3<f64>, radius: f64, ray: &Ray<f64>) -> Option<f64> {
     // Equation of a sphere with radius r, centered at the origin:
     //      x² + y² + z² = r²
     //
@@ -62,14 +62,22 @@ fn hit_sphere(center: &Point3<f64>, radius: f64, ray: &Ray<f64>) -> bool {
     // (Wikipedia: https://en.wikipedia.org/wiki/Discriminant)
     let discriminant = b * b - 4.0 * a * c;
 
-    discriminant > 0.0
+    if discriminant > 0.0 {
+        let t = (-b - discriminant.sqrt()) / (2.0 * a);
+        Some(t)
+    } else {
+        None
+    }
 }
 
 /// Compute the color of pixel hit by a ray.
 fn ray_color(ray: &Ray<f64>) -> Color {
-    if hit_sphere(&Point3::new(0.0, 0.0, -1.0), 0.5, ray) {
-        // Red sphere
-        return Color::new(1.0, 0.0, 0.0);
+    if let Some(t) = hit_sphere(&Point3::new(0.0, 0.0, -1.0), 0.5, ray) {
+        // sphere: outward surface normal is in the direction of the hit point minus the center
+        let mut normal = (ray.at(t) - Vec3::<f64>::new(0.0, 0.0, -1.0)).normalized();
+        // assume the normal is a unit length vector in the range [-1.0, 1.0] and map it to the
+        // [0.0, 1.0] range since we are going to interpret it as RGB
+        return Color::new(normal.x() + 1.0, normal.y() + 1.0, normal.z() + 1.0) * 0.5;
     }
 
     // scale the ray direction to unit length (so -1.0 < y < 1.0)

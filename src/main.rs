@@ -11,7 +11,7 @@ mod ray;
 use ray::{Point3, Ray};
 
 mod hittable;
-use hittable::Hittable;
+use hittable::{Hittable, HittableList};
 
 mod sphere;
 use sphere::Sphere;
@@ -28,9 +28,8 @@ fn write_color(color: &Color) {
 }
 
 /// Compute the color of pixel hit by a ray.
-fn ray_color(ray: &Ray<f64>) -> Color {
-    let sphere = Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5);
-    if let Some(rec) = sphere.is_hit(ray, -1.0, 1.0) {
+fn ray_color(ray: &Ray<f64>, world: &HittableList<f64>) -> Color {
+    if let Some(rec) = world.is_hit(ray, 0.0, std::f64::MAX) {
         // assume the normal is a unit length vector in the range [-1.0, 1.0] and map it to the
         // [0.0, 1.0] range since we are going to interpret it as RGB
         return Color::new(
@@ -66,6 +65,10 @@ fn main() -> io::Result<()> {
         VIEWPORT_WIDTH, VIEWPORT_HEIGHT, FOCAL_LENGTH
     );
 
+    // World
+    let mut world = HittableList::new();
+    world.add(Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5));
+
     // "eye" of the scene aka camera center
     let origin = Point3::<f64>::new(0.0, 0.0, 0.0);
     // right handed coordinate system: x axis is horizontal
@@ -94,7 +97,7 @@ fn main() -> io::Result<()> {
             let v = (j as f64) / ((img.height() - 1) as f64);
             let direction = lower_left_corner + horizontal * u + vertical * v - origin;
             let ray = Ray::new(origin, direction);
-            img[j][i] = ray_color(&ray);
+            img[j][i] = ray_color(&ray, &world);
         }
     }
     eprintln!("\n>> Render done");

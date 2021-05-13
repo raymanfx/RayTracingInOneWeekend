@@ -54,16 +54,20 @@ fn hit_sphere(center: &Point3<f64>, radius: f64, ray: &Ray<f64>) -> Option<f64> 
     //      negative => no real solution, no hit points
     //      zero     => one real solution, one hit point
 
+    // we simplify the code by applying two things:
+    //      1. a vector dotted with itself is equal to its squared length
+    //      2. b = 2h to remove the factor of two
+
     let oc = ray.origin() - *center;
-    let a = Vec3::dot(&ray.direction(), &ray.direction());
-    let b = 2.0 * Vec3::dot(&oc, &ray.direction());
-    let c = Vec3::dot(&oc, &oc) - radius * radius;
+    let a = ray.direction().length_squared();
+    let half_b = Vec3::dot(&oc, &ray.direction());
+    let c = oc.length_squared() - radius * radius;
     // The quadratic polynomial ax² + bx + c has discriminant: b² - 4ac.
     // (Wikipedia: https://en.wikipedia.org/wiki/Discriminant)
-    let discriminant = b * b - 4.0 * a * c;
+    let discriminant = half_b * half_b - a * c;
 
     if discriminant > 0.0 {
-        let t = (-b - discriminant.sqrt()) / (2.0 * a);
+        let t = (-half_b - discriminant.sqrt()) / a;
         Some(t)
     } else {
         None

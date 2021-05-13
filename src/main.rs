@@ -24,11 +24,21 @@ use camera::Camera;
 /// RGB color with each channel ranging from 0.0 to 1.0
 type Color = Vec3<f64>;
 
-/// Transform color values from [0.0, 1.0] to [0, 255].
+/// Post processing to transform RGB channels into PPM RGB color values.
+///
+/// We perform two steps:
+///     1. Gamma correction using gamma=2
+///     2. Color value mapping from [0.0, 1.0] to [0, 255]
 fn write_color(color: &Color) {
     let mut r = color.x();
     let mut g = color.y();
     let mut b = color.z();
+
+    // gamma correction: raise color to the power of 1/gamma
+    // here: use gamma=2 as first approximation
+    r = r.sqrt();
+    g = g.sqrt();
+    b = b.sqrt();
 
     // clamp to [0.0, 1.0] range
     r = rtweekend::clamp(r, 0.0, 0.999);

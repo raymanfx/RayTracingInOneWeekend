@@ -85,11 +85,18 @@ fn ray_color(ray: &Ray<f64>, world: &HittableList<f64>, depth: usize) -> Color {
     let t_max = std::f64::MAX;
 
     if let Some(rec) = world.is_hit(ray, t_min, t_max) {
+        // Diffuse reflection: True Lambertian reflection.
+        // We aim for a Lambertian distribution of the reflected rays, which has a distribution of
+        // cos(phi) instead of cos³(phi) for random vectors inside the unit sphere.
+        // To achieve this, we pick a random point on the surface of the unit sphere, which is done
+        // by picking a random point inside the sphere and then normalizing that point.
+        let random_unit_vec_in_unit_sphere = random_vec_in_unit_sphere().normalized();
+
         // Diffuse reflection: send out a new ray from the hit position point pointing towards a
-        // random direction inside the unit sphere tangent to that hit point.
+        // random point on the surface of the sphere tangent to that hit point.
         // Possible problem: the recursion depth may be too deep, so we blow up the stack. Avoid
         // this by limiting the number of child rays.
-        let target = rec.point + rec.normal + random_vec_in_unit_sphere();
+        let target = rec.point + rec.normal + random_unit_vec_in_unit_sphere;
         let ray = Ray::new(rec.point, target - rec.point);
 
         // assume the normal is a unit length vector in the range [-1.0, 1.0] and map it to the

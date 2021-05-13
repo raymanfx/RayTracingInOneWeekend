@@ -43,16 +43,42 @@ fn write_color(color: &Color) {
     println!("{} {} {}", r as u8, g as u8, b as u8);
 }
 
+/// Find a random vector in the unit sphere.
+fn random_vec_in_unit_sphere() -> Vec3<f64> {
+    loop {
+        // choose a random vector inside the unit cube
+        let x = rtweekend::random(-1.0..1.0);
+        let y = rtweekend::random(-1.0..1.0);
+        let z = rtweekend::random(-1.0..1.0);
+        let vec = Vec3::new(x, y, z);
+
+        if vec.length_squared() >= 1.0 {
+            // vector is not inside the unit sphere, continue the search
+            continue;
+        }
+
+        return vec;
+    }
+}
+
 /// Compute the color of pixel hit by a ray.
-fn ray_color(ray: &Ray<f64>, world: &HittableList<f64>) -> Color {
+fn ray_color(ray: &Ray<f64>, world: &HittableList<f64>, depth: usize) -> Color {
+    if depth == 0 {
+        // ray bounce limit exceeded, no more light is reflected
+        return Color::new(0.0, 0.0, 0.0);
+    }
+
     if let Some(rec) = world.is_hit(ray, 0.0, std::f64::MAX) {
+        // Diffuse reflection: send out a new ray from the hit position point pointing towards a
+        // random direction inside the unit sphere tangent to that hit point.
+        // Possible problem: the recursion depth may be too deep, so we blow up the stack. Avoid
+        // this by limiting the number of child rays.
+        let target = rec.point + rec.normal + random_vec_in_unit_sphere();
+        let ray = Ray::new(rec.point, target - rec.point);
+
         // assume the normal is a unit length vector in the range [-1.0, 1.0] and map it to the
         // [0.0, 1.0] range since we are going to interpret it as RGB
-        return Color::new(
-            rec.normal.x() + 1.0,
-            rec.normal.y() + 1.0,
-            rec.normal.z() + 1.0,
-        ) * 0.5;
+        return ray_color(&ray, world, depth - 1) * 0.5;
     }
 
     // scale the ray direction to unit length (so -1.0 < y < 1.0)
@@ -70,7 +96,8 @@ fn main() -> io::Result<()> {
     const ASPECT_RATIO: f64 = 16.0 / 9.0;
     const IMAGE_WIDTH: usize = 400;
     const IMAGE_HEIGHT: usize = (IMAGE_WIDTH as f64 / ASPECT_RATIO) as usize;
-    const SAMPLES_PER_PIXEL: usize = 100;
+    const RAY_SAMPLES_PER_PIXEL: usize = 100;
+    const RAY_MAX_DEPTH: usize = 50;
     eprintln!(">> Image: {} (W) x {} (H)", IMAGE_WIDTH, IMAGE_HEIGHT);
 
     // Camera settings
@@ -99,17 +126,17 @@ fn main() -> io::Result<()> {
         for i in 0..img.width() {
             let mut color = Color::new(0.0, 0.0, 0.0);
 
-            // For each pixel, we send SAMPLES_PER_PIXEL number of rays and essentially average
+            // For each pixel, we send RAY_SAMPLES_PER_PIXEL number of rays and essentially average
             // their color values to get a final pixel color.
-            for _ in 0..SAMPLES_PER_PIXEL {
+            for _ in 0..RAY_SAMPLES_PER_PIXEL {
                 let u = (i as f64 + rtweekend::random(0.0..1.0)) / ((img.width() - 1) as f64);
                 let v = (j as f64 + rtweekend::random(0.0..1.0)) / ((img.height() - 1) as f64);
                 let ray = camera.ray(u, v);
-                color = color + ray_color(&ray, &world);
+                color = color + ray_color(&ray, &world, RAY_MAX_DEPTH);
             }
 
             // divide the color by the number of samples
-            let scale = 1.0 / SAMPLES_PER_PIXEL as f64;
+            let scale = 1.0 / RAY_SAMPLES_PER_PIXEL as f64;
             color = color * scale;
 
             img[j][i] = color;

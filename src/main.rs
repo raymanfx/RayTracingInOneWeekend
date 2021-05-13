@@ -21,8 +21,57 @@ fn write_color(color: &Color) {
     println!("{} {} {}", r, g, b);
 }
 
-/// Compute the color of the background.
+/// Check whether a sphere is hit by a ray.
+fn hit_sphere(center: &Point3<f64>, radius: f64, ray: &Ray<f64>) -> bool {
+    // Equation of a sphere with radius r, centered at the origin:
+    //      x² + y² + z² = r²
+    //
+    // If any given point P = (x,y,z) is inside the sphere, then:
+    //      x² + y² + z² < r²
+    //
+    // and accordingly when it is outside the sphere:
+    //      x² + y² + z² > r²
+    //
+    // For a sphere center at an arbitrary point (C_x,C_y,C_z):
+    //      (x - C_x)² + (y - C_y)² + (z - C_z)² = r²
+    //
+    // Since the vector from center C to point P is (P - C), we can write:
+    //      (P - C) * (P - C) = (x - C_x)² + (y - C_y)² + (z - C_z)²
+    //
+    // or in short:
+    //      (P - C) * (P - C) = r²
+    //
+    // which can be read as: "any point P that satisfies this equation is on the sphere".
+    // Plugging in the equation for a ray: P(t) = A + t*b, we get the following:
+    //      (A + t*b - C) * (A + t*b - C) = r²
+    //
+    // Expanding this equation and moving all terms to the left side:
+    //      t²b * b + 2tb * (A - C) + (A - C) * (A - C) - r² = 0
+    //
+    // In graphics, the algebra usually related to the geometry. In our case, solving the quadratic
+    // equation for t yields a square root part which is either:
+    //      positive => two real solutions, two hit points
+    //      negative => no real solution, no hit points
+    //      zero     => one real solution, one hit point
+
+    let oc = ray.origin() - *center;
+    let a = Vec3::dot(&ray.direction(), &ray.direction());
+    let b = 2.0 * Vec3::dot(&oc, &ray.direction());
+    let c = Vec3::dot(&oc, &oc) - radius * radius;
+    // The quadratic polynomial ax² + bx + c has discriminant: b² - 4ac.
+    // (Wikipedia: https://en.wikipedia.org/wiki/Discriminant)
+    let discriminant = b * b - 4.0 * a * c;
+
+    discriminant > 0.0
+}
+
+/// Compute the color of pixel hit by a ray.
 fn ray_color(ray: &Ray<f64>) -> Color {
+    if hit_sphere(&Point3::new(0.0, 0.0, -1.0), 0.5, ray) {
+        // Red sphere
+        return Color::new(1.0, 0.0, 0.0);
+    }
+
     // scale the ray direction to unit length (so -1.0 < y < 1.0)
     let unit_direction = ray.direction().normalized();
     // scale t so 0.0 <= t <= 1.0

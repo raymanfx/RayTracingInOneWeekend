@@ -4,13 +4,19 @@ use std::io::Write;
 mod ppm;
 use ppm::Image;
 
+mod vec3;
+use vec3::Vec3;
+
+/// RGB color with each channel ranging from 0 to 255
+type Color = Vec3<u8>;
+
 fn main() -> io::Result<()> {
     // Image settings
     const IMAGE_WIDTH: usize = 256;
     const IMAGE_HEIGHT: usize = 256;
 
     // create the image buffer
-    let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, [0u8; 3]);
+    let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, Color::new(0, 0, 0));
 
     // fill image with test data
     for j in (0..img.height()).rev() {
@@ -25,7 +31,7 @@ fn main() -> io::Result<()> {
             let ir = (255.999 * r) as u8;
             let ig = (255.999 * g) as u8;
             let ib = (255.999 * b) as u8;
-            img[i][j] = [ir, ig, ib];
+            img[i][j] = Color::new(ir, ig, ib);
         }
     }
     eprintln!("\n>> Render done");

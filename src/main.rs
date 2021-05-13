@@ -16,6 +16,8 @@ use hittable::{Hittable, HittableList};
 mod sphere;
 use sphere::Sphere;
 
+mod rtweekend;
+
 /// RGB color with each channel ranging from 0.0 to 1.0
 type Color = Vec3<f64>;
 

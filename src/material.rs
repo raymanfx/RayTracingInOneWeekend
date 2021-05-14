@@ -1,7 +1,10 @@
+use std::ops::{Add, Div, Mul, Sub};
+
 use crate::color::Color;
 use crate::hittable::HitRecord;
 use crate::ray::Ray;
 use crate::rtweekend;
+use crate::vec3::Vec3;
 
 /// Generic material trait.
 pub trait Material<T: Copy> {
@@ -51,5 +54,75 @@ impl Material<f64> for Lambertian {
         let scatter = Ray::new(rec.point, scatter_direction);
 
         Some((scatter, self.albedo))
+    }
+}
+
+/// Metal (specular) material.
+///
+/// For smooth metal surfaces, light is not randomly scattered. Instead, the angle of the incident
+/// ray is equal to that of the specular outgoing ray.
+///
+///           V   N   ^ ^
+///            \  ^  /  |
+///             \ | /   | B
+///              v|/    |
+/// S ------------x------------
+///                \    |
+///                 \   | B
+///                  v  |
+///
+/// The elements of the figure are:
+///     * S: Metal surface
+///     * V: Incident ray
+///     * N: Surface normal
+///
+/// Additionally, B is an additional vector for illustration purposes.
+/// The reflected ray (in between N and B) has the same angle as the incident ray V with regards to
+// the surface. It can be computed as V + B + B.
+///
+/// In our current design, N is a unit vector, but the same does not have to be true for V.
+/// Furthermore, V points inwards, so the sign has to be changed.
+/// All this is encoded in the reflect() function.
+pub struct Metal {
+    /// Color of the object.
+    albedo: Color,
+}
+
+impl Metal {
+    /// Create a new metallic material from a given intrinsic object color.
+    pub fn new(albedo: Color) -> Self {
+        Metal { albedo }
+    }
+
+    /// Returns the reflected ray.
+    ///
+    /// This basically just encodes the V + B + B term for the specular reflection. We flip the
+    /// sign and simplify the term so it becomes V - 2B.
+    pub fn reflect<T: Copy>(ray: &Vec3<T>, normal: &Vec3<T>) -> Vec3<T>
+    where
+        T: Add<Output = T>
+            + Div<Output = T>
+            + Mul<Output = T>
+            + Mul<f64, Output = T>
+            + Sub<Output = T>
+            + From<f64>
+            + Into<f64>,
+    {
+        let b = *normal * Vec3::dot(ray, normal);
+        *ray - b * T::from(2.0)
+    }
+}
+
+impl Material<f64> for Metal {
+    fn scatter(&self, ray: &Ray<f64>, rec: &HitRecord<f64>) -> Option<(Ray<f64>, Color)> {
+        // specular reflection
+        let direction = Metal::reflect(&ray.direction().normalized(), &rec.normal);
+        let scatter = Ray::new(rec.point, direction);
+
+        if Vec3::dot(&scatter.direction(), &rec.normal) <= 0.0 {
+            None
+        } else {
+            Some((scatter, self.albedo))
+        }
     }
 }

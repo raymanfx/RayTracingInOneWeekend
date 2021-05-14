@@ -71,8 +71,13 @@ fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
 
     if let Some((rec, object)) = world.trace(ray, t_min, t_max) {
         // scatter the light ray
-        if let Some((scatter, _attenuation)) = object.material().scatter(ray, &rec) {
-            return ray_color(&scatter, world, depth - 1) * 0.5;
+        if let Some((scatter, attenuation)) = object.material().scatter(ray, &rec) {
+            let mut scatter_color = ray_color(&scatter, world, depth - 1);
+            // consider attenuation of the object
+            scatter_color[0] = scatter_color[0] * attenuation[0];
+            scatter_color[1] = scatter_color[1] * attenuation[1];
+            scatter_color[2] = scatter_color[2] * attenuation[2];
+            return scatter_color;
         } else {
             // no light is reflected
             return Color::new(0.0, 0.0, 0.0);
@@ -110,16 +115,32 @@ fn main() -> io::Result<()> {
 
     // World
     let mut world = World::new();
-    world.add(Sphere::new(
+    let sphere_ground = Sphere::new(
         Point3::new(0.0, -100.5, -1.0),
         100.0,
         material::Lambertian::new(Color::new(0.8, 0.8, 0.0)),
-    ));
-    world.add(Sphere::new(
+    );
+    let sphere_center = Sphere::new(
         Point3::new(0.0, 0.0, -1.0),
         0.5,
         material::Lambertian::new(Color::new(0.7, 0.3, 0.3)),
-    ));
+    );
+    let sphere_left = Sphere::new(
+        Point3::new(-1.0, 0.0, -1.0),
+        0.5,
+        material::Metal::new(Color::new(0.8, 0.8, 0.8)),
+    );
+    let sphere_right = Sphere::new(
+        Point3::new(1.0, 0.0, -1.0),
+        0.5,
+        material::Metal::new(Color::new(0.8, 0.6, 0.2)),
+    );
+
+    // add objects to the world
+    world.add(sphere_ground);
+    world.add(sphere_center);
+    world.add(sphere_left);
+    world.add(sphere_right);
 
     // create the image buffer
     let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, Color::new(0.0, 0.0, 0.0));

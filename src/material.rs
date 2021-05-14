@@ -86,12 +86,20 @@ impl Material<f64> for Lambertian {
 pub struct Metal {
     /// Color of the object.
     albedo: Color,
+    /// Fuziness of the specular reflections.
+    fuzz: f64,
 }
 
 impl Metal {
     /// Create a new metallic material from a given intrinsic object color.
-    pub fn new(albedo: Color) -> Self {
-        Metal { albedo }
+    ///
+    /// * `albedo`: Intrinsic surface color.
+    /// * `fuzz`: Fuzziness factor for specular reflection in the range [0.0, 1.0].
+    pub fn new(albedo: Color, fuzz: f64) -> Self {
+        Metal {
+            albedo,
+            fuzz: rtweekend::clamp(fuzz, 0.0, 1.0),
+        }
     }
 
     /// Returns the reflected ray.
@@ -117,6 +125,8 @@ impl Material<f64> for Metal {
     fn scatter(&self, ray: &Ray<f64>, rec: &HitRecord<f64>) -> Option<(Ray<f64>, Color)> {
         // specular reflection
         let direction = Metal::reflect(&ray.direction().normalized(), &rec.normal);
+        // apply fuzzing
+        let direction = direction + rtweekend::random_vec_in_unit_sphere() * self.fuzz;
         let scatter = Ray::new(rec.point, direction);
 
         if Vec3::dot(&scatter.direction(), &rec.normal) <= 0.0 {

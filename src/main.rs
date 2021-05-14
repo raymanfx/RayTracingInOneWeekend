@@ -128,12 +128,12 @@ fn main() -> io::Result<()> {
     let sphere_left = Sphere::new(
         Point3::new(-1.0, 0.0, -1.0),
         0.5,
-        material::Metal::new(Color::new(0.8, 0.8, 0.8)),
+        material::Metal::new(Color::new(0.8, 0.8, 0.8), 0.3),
     );
     let sphere_right = Sphere::new(
         Point3::new(1.0, 0.0, -1.0),
         0.5,
-        material::Metal::new(Color::new(0.8, 0.6, 0.2)),
+        material::Metal::new(Color::new(0.8, 0.6, 0.2), 1.0),
     );
 
     // add objects to the world

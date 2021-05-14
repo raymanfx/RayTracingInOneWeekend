@@ -1,15 +1,26 @@
 use crate::hittable::{HitRecord, Hittable};
+use crate::material::Material;
 use crate::ray::{Point3, Ray};
 use crate::vec3::Vec3;
 
 pub struct Sphere<T: Copy> {
     center: Point3<T>,
     radius: T,
+    material: Box<dyn Material<T>>,
 }
 
 impl<T: Copy> Sphere<T> {
-    pub fn new(center: Point3<T>, radius: T) -> Self {
-        Sphere { center, radius }
+    /// Create a new sphere given its position, size and material.
+    ///
+    /// * `center` - Center point in 3D space.
+    /// * `radius` - Radius in each direction.
+    /// * `material` - Surface material.
+    pub fn new<M: Material<T> + 'static>(center: Point3<T>, radius: T, material: M) -> Self {
+        Sphere {
+            center,
+            radius,
+            material: Box::new(material),
+        }
     }
 }
 
@@ -77,5 +88,9 @@ impl Hittable<f64> for Sphere<f64> {
         // outward surface normal is in the direction of the hit point minus the center
         let outward_normal = (point - self.center) / self.radius;
         Some(HitRecord::new(point, outward_normal, root, ray))
+    }
+
+    fn material(&self) -> &dyn Material<f64> {
+        self.material.as_ref()
     }
 }

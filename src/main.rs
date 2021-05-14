@@ -5,13 +5,11 @@ mod ppm;
 use ppm::Image;
 
 mod vec3;
-use vec3::Vec3;
 
 mod ray;
 use ray::{Point3, Ray};
 
 mod hittable;
-use hittable::{Hittable, HittableList};
 
 mod sphere;
 use sphere::Sphere;
@@ -21,8 +19,13 @@ mod rtweekend;
 mod camera;
 use camera::Camera;
 
-/// RGB color with each channel ranging from 0.0 to 1.0
-type Color = Vec3<f64>;
+mod color;
+use color::Color;
+
+mod world;
+use world::World;
+
+mod material;
 
 /// Post processing to transform RGB channels into PPM RGB color values.
 ///
@@ -53,26 +56,8 @@ fn write_color(color: &Color) {
     println!("{} {} {}", r as u8, g as u8, b as u8);
 }
 
-/// Find a random vector in the unit sphere.
-fn random_vec_in_unit_sphere() -> Vec3<f64> {
-    loop {
-        // choose a random vector inside the unit cube
-        let x = rtweekend::random(-1.0..1.0);
-        let y = rtweekend::random(-1.0..1.0);
-        let z = rtweekend::random(-1.0..1.0);
-        let vec = Vec3::new(x, y, z);
-
-        if vec.length_squared() >= 1.0 {
-            // vector is not inside the unit sphere, continue the search
-            continue;
-        }
-
-        return vec;
-    }
-}
-
 /// Compute the color of pixel hit by a ray.
-fn ray_color(ray: &Ray<f64>, world: &HittableList<f64>, depth: usize) -> Color {
+fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
     if depth == 0 {
         // ray bounce limit exceeded, no more light is reflected
         return Color::new(0.0, 0.0, 0.0);
@@ -84,24 +69,14 @@ fn ray_color(ray: &Ray<f64>, world: &HittableList<f64>, depth: usize) -> Color {
     let t_min = 0.001;
     let t_max = std::f64::MAX;
 
-    if let Some(rec) = world.is_hit(ray, t_min, t_max) {
-        // Diffuse reflection: True Lambertian reflection.
-        // We aim for a Lambertian distribution of the reflected rays, which has a distribution of
-        // cos(phi) instead of cos³(phi) for random vectors inside the unit sphere.
-        // To achieve this, we pick a random point on the surface of the unit sphere, which is done
-        // by picking a random point inside the sphere and then normalizing that point.
-        let random_unit_vec_in_unit_sphere = random_vec_in_unit_sphere().normalized();
-
-        // Diffuse reflection: send out a new ray from the hit position point pointing towards a
-        // random point on the surface of the sphere tangent to that hit point.
-        // Possible problem: the recursion depth may be too deep, so we blow up the stack. Avoid
-        // this by limiting the number of child rays.
-        let target = rec.point + rec.normal + random_unit_vec_in_unit_sphere;
-        let ray = Ray::new(rec.point, target - rec.point);
-
-        // assume the normal is a unit length vector in the range [-1.0, 1.0] and map it to the
-        // [0.0, 1.0] range since we are going to interpret it as RGB
-        return ray_color(&ray, world, depth - 1) * 0.5;
+    if let Some((rec, object)) = world.trace(ray, t_min, t_max) {
+        // scatter the light ray
+        if let Some((scatter, _attenuation)) = object.material().scatter(ray, &rec) {
+            return ray_color(&scatter, world, depth - 1) * 0.5;
+        } else {
+            // no light is reflected
+            return Color::new(0.0, 0.0, 0.0);
+        }
     }
 
     // scale the ray direction to unit length (so -1.0 < y < 1.0)
@@ -134,9 +109,17 @@ fn main() -> io::Result<()> {
     let camera = Camera::new(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, FOCAL_LENGTH);
 
     // World
-    let mut world = HittableList::new();
-    world.add(Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5));
-    world.add(Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0));
+    let mut world = World::new();
+    world.add(Sphere::new(
+        Point3::new(0.0, -100.5, -1.0),
+        100.0,
+        material::Lambertian::new(Color::new(0.8, 0.8, 0.0)),
+    ));
+    world.add(Sphere::new(
+        Point3::new(0.0, 0.0, -1.0),
+        0.5,
+        material::Lambertian::new(Color::new(0.7, 0.3, 0.3)),
+    ));
 
     // create the image buffer
     let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, Color::new(0.0, 0.0, 0.0));

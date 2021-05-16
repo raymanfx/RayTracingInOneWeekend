@@ -136,3 +136,116 @@ impl Material<f64> for Metal {
         }
     }
 }
+
+/// Clear (dielectrics) material.
+///
+/// Examples of dielectric materials are water, glass or diamond.
+/// When such a material it hit by a light ray, the ray is split into a reflected and a refracted
+/// (transmitted) ray.
+///
+/// Refraction for dielectrics is described by Snell's law:
+///
+///     η⋅sinθ = η′⋅sinθ′
+///
+/// where
+///     * θ/θ′: angles from the surface normal
+///     * η/η′: refractive indices (e.g. 1.0 for air, 1.3-1.7 for glass)
+///
+///           R   N
+///            \  ^
+///             \ |
+///       η      v|
+/// S ------------x------------
+///       η′      |\
+///               | \
+///               |  \
+///               v   v
+///               N´   R´
+///
+/// In the illustration above, R is the incident ray and N is the surface normal. θ is thus the
+/// angle between R and N, while θ′ is the angle between N´ and R´. In the illustration, the angles
+/// θ and θ′ are exactly the same, so the ray R would pass from air (η = 1.0) through air
+/// (η′ = 1.0).
+///
+/// To calculate the angle θ′, we solve for sinθ′:
+///
+///     sinθ′ = (η / η′)⋅sinθ
+///
+/// We split R´ into two parts: one that is perpendicular to N´ and one that is parallel to N´:
+///
+///     R´ = R′⊥ + R′∥
+///
+/// Solving for those parts yields:
+///
+///     R′⊥ = (η / η′)⋅(R + cosθ⋅n)
+///     R′∥ = - sqrt(1 - |R′⊥|²)⋅n
+///
+/// The next step is solving for cosθ. The dot product of two vectors can be expressed in terms of
+/// the cosine of the angle between them:
+///
+///     a⋅b = |a||b| cosθ
+///
+/// or, assuming unit vectors:
+///
+///     a⋅b = cosθ
+///
+/// Thus, we can rewrite R′⊥ as:
+///
+///     R′⊥ = (η / η′)⋅(R + (-R⋅n)n)
+///
+/// All this is encoded in the refract() function.
+pub struct Dielectric {
+    /// Refraction index.
+    refraction: f64,
+}
+
+impl Dielectric {
+    /// Create a new metallic material from a given intrinsic object color.
+    ///
+    /// * `refraction`: Refraction index.
+    pub fn new(refraction: f64) -> Self {
+        Dielectric { refraction }
+    }
+
+    /// Returns the refracted (trasmitted) ray.
+    ///
+    /// Based on Snell's law.
+    ///
+    /// * `ray`: Incident ray.
+    /// * `normal`: Surface normal (in eta direction).
+    /// * `refraction_ratio`: Refractive ratio (η over η´).
+    pub fn refract(ray: &Vec3<f64>, normal: &Vec3<f64>, refraction_ratio: f64) -> Vec3<f64> {
+        // the part of the refracted ray which is perpendicular to R´
+        let mut cos_theta = Vec3::dot(&(-(*ray)), normal);
+        if cos_theta > 1.0 {
+            cos_theta = 1.0;
+        }
+        let perpendicular = (*ray + *normal * cos_theta) * refraction_ratio;
+        // the part that is parallel to R´
+        let parallel = *normal * (-((1.0 - perpendicular.length_squared()).abs()).sqrt());
+
+        perpendicular + parallel
+    }
+}
+
+impl Material<f64> for Dielectric {
+    fn scatter(&self, ray: &Ray<f64>, rec: &HitRecord<f64>) -> Option<(Ray<f64>, Color)> {
+        // assume the material where the ray originates from is air
+        let eta = 1.0;
+        let eta_prime = self.refraction;
+        let refraction_ratio = if rec.front_face {
+            eta / eta_prime
+        } else {
+            eta_prime
+        };
+
+        // refraction
+        let direction =
+            Dielectric::refract(&ray.direction().normalized(), &rec.normal, refraction_ratio);
+        let scatter = Ray::new(rec.point, direction);
+        // attenuation is always 1 since air/glass/diamond do not absorb
+        let attenuation = Color::new(1.0, 1.0, 1.0);
+
+        Some((scatter, attenuation))
+    }
+}

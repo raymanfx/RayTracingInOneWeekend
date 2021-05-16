@@ -193,7 +193,27 @@ impl Material<f64> for Metal {
 ///
 ///     R′⊥ = (η / η′)⋅(R + (-R⋅n)n)
 ///
-/// All this is encoded in the refract() function.
+/// Sometimes, the refraction ratio η / η′ is too high (e.g. when a ray passes through glass and
+/// enters air), so a real solution to Snell's law does not exist. An example:
+///
+///     sinθ′ = (η / η′)⋅sinθ
+///
+/// given η = 1.5 (glass) and η´ = 1.0 (air):
+///
+///     sinθ′ = (1.5 / 1.0)⋅sinθ
+///
+/// Since sinθ′ can at maximum be 1.0, sinθ must at maximum be (1.0 / 1.5), otherwise the equation
+/// can no longer be satisfied. We can solve for sinθ using the following:
+///
+///     sinθ = sqrt(1 - cos²θ)
+///     cosθ = R⋅n
+///
+/// which yields:
+///
+///     sinθ = sqrt(1 - (R⋅n)²)
+///
+/// In case of sinθ > (1.0 / refraction ratio), we cannot refract and thus must reflect. This is
+/// called "total internal reflection".
 pub struct Dielectric {
     /// Refraction index.
     refraction: f64,
@@ -239,9 +259,28 @@ impl Material<f64> for Dielectric {
             eta_prime
         };
 
-        // refraction
-        let direction =
-            Dielectric::refract(&ray.direction().normalized(), &rec.normal, refraction_ratio);
+        // Total internal reflection: if
+        //
+        //  (η / η′)⋅sinθ > 1.0
+        //
+        // we must not refract (and have to reflect) instead!
+        let r = ray.direction().normalized();
+        // cosθ = R⋅n
+        let mut cos_theta = Vec3::dot(&(-(r)), &rec.normal);
+        if cos_theta > 1.0 {
+            cos_theta = 1.0;
+        }
+        // sinθ = sqrt(1 - cos²θ)
+        let sin_theta = 1.0 - cos_theta * cos_theta;
+
+        // direction of the scattered ray
+        let direction = if refraction_ratio * sin_theta > 1.0 {
+            // must reflect
+            Metal::reflect(&r, &rec.normal)
+        } else {
+            // can refract
+            Dielectric::refract(&r, &rec.normal, refraction_ratio)
+        };
         let scatter = Ray::new(rec.point, direction);
         // attenuation is always 1 since air/glass/diamond do not absorb
         let attenuation = Color::new(1.0, 1.0, 1.0);

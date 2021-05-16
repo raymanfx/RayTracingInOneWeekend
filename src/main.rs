@@ -123,7 +123,7 @@ fn main() -> io::Result<()> {
     let sphere_center = Sphere::new(
         Point3::new(0.0, 0.0, -1.0),
         0.5,
-        material::Dielectric::new(1.5),
+        material::Lambertian::new(Color::new(0.1, 0.2, 0.5)),
     );
     let sphere_left = Sphere::new(
         Point3::new(-1.0, 0.0, -1.0),
@@ -133,7 +133,7 @@ fn main() -> io::Result<()> {
     let sphere_right = Sphere::new(
         Point3::new(1.0, 0.0, -1.0),
         0.5,
-        material::Metal::new(Color::new(0.8, 0.6, 0.2), 1.0),
+        material::Metal::new(Color::new(0.8, 0.6, 0.2), 0.0),
     );
 
     // add objects to the world

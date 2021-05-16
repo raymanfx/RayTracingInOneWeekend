@@ -5,6 +5,7 @@ mod ppm;
 use ppm::Image;
 
 mod vec3;
+use vec3::Vec3;
 
 mod ray;
 use ray::{Point3, Ray};
@@ -106,12 +107,15 @@ fn main() -> io::Result<()> {
     // Camera settings
     const VIEWPORT_HEIGHT: f64 = 2.0;
     const VIEWPORT_WIDTH: f64 = ASPECT_RATIO * VIEWPORT_HEIGHT;
-    const FOCAL_LENGTH: f64 = 1.0;
     eprintln!(
-        ">> Viewport: {} (W) x {} (H) - focal: {}",
-        VIEWPORT_WIDTH, VIEWPORT_HEIGHT, FOCAL_LENGTH
+        ">> Viewport: {} (W) x {} (H)",
+        VIEWPORT_WIDTH, VIEWPORT_HEIGHT
     );
-    let camera = Camera::new(VIEWPORT_WIDTH, VIEWPORT_HEIGHT, FOCAL_LENGTH);
+    let camera = Camera::new(VIEWPORT_WIDTH, VIEWPORT_HEIGHT)
+        .lookfrom(Vec3::new(-2.0, 2.0, 1.0))
+        .lookat(Vec3::new(0.0, 0.0, -1.0))
+        .up(Vec3::new(0.0, 1.0, 0.0))
+        .vfov(20.0);
 
     // World
     let mut world = World::new();
@@ -127,7 +131,12 @@ fn main() -> io::Result<()> {
     );
     let sphere_left = Sphere::new(
         Point3::new(-1.0, 0.0, -1.0),
-        -0.4,
+        0.5,
+        material::Dielectric::new(1.5),
+    );
+    let sphere_left_inner = Sphere::new(
+        Point3::new(-1.0, 0.0, -1.0),
+        -0.45,
         material::Dielectric::new(1.5),
     );
     let sphere_right = Sphere::new(
@@ -140,6 +149,7 @@ fn main() -> io::Result<()> {
     world.add(sphere_ground);
     world.add(sphere_center);
     world.add(sphere_left);
+    world.add(sphere_left_inner);
     world.add(sphere_right);
 
     // create the image buffer

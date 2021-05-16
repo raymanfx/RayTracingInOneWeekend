@@ -127,7 +127,7 @@ fn main() -> io::Result<()> {
     );
     let sphere_left = Sphere::new(
         Point3::new(-1.0, 0.0, -1.0),
-        0.5,
+        -0.4,
         material::Dielectric::new(1.5),
     );
     let sphere_right = Sphere::new(

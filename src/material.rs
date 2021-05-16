@@ -246,6 +246,18 @@ impl Dielectric {
 
         perpendicular + parallel
     }
+
+    /// Returns the reflectance on a dielectric surface at a given angle.
+    ///
+    /// Based on the polynomial approximation by Christophe Schlick.
+    ///
+    /// * `angle` - Angle of incoming ray.
+    /// * `refraction_ratio`: - Refractive ratio (η over η´).
+    pub fn reflectance(angle: f64, refraction_ratio: f64) -> f64 {
+        let r0 = (1.0 - refraction_ratio) / (1.0 + refraction_ratio);
+        let r0 = r0 * r0;
+        r0 + (1.0 - r0) * (1.0 - angle).powf(5.0)
+    }
 }
 
 impl Material<f64> for Dielectric {
@@ -266,15 +278,21 @@ impl Material<f64> for Dielectric {
         // we must not refract (and have to reflect) instead!
         let r = ray.direction().normalized();
         // cosθ = R⋅n
-        let mut cos_theta = Vec3::dot(&(-(r)), &rec.normal);
+        let mut cos_theta = Vec3::dot(&(-r), &rec.normal);
         if cos_theta > 1.0 {
             cos_theta = 1.0;
         }
         // sinθ = sqrt(1 - cos²θ)
-        let sin_theta = 1.0 - cos_theta * cos_theta;
+        let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
+
+        // Snell's law
+        let can_refract = refraction_ratio * sin_theta <= 1.0;
+        // Schlick approximation
+        let can_refract = can_refract
+            && (Dielectric::reflectance(cos_theta, refraction_ratio)) < rtweekend::random(0.0..1.0);
 
         // direction of the scattered ray
-        let direction = if refraction_ratio * sin_theta > 1.0 {
+        let direction = if !can_refract {
             // must reflect
             Metal::reflect(&r, &rec.normal)
         } else {

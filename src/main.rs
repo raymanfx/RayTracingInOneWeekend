@@ -111,11 +111,14 @@ fn main() -> io::Result<()> {
         ">> Viewport: {} (W) x {} (H)",
         VIEWPORT_WIDTH, VIEWPORT_HEIGHT
     );
+    let lookfrom = Vec3::new(3.0, 3.0, 2.0);
+    let lookat = Vec3::new(0.0, 0.0, -1.0);
     let camera = Camera::new(VIEWPORT_WIDTH, VIEWPORT_HEIGHT)
-        .lookfrom(Vec3::new(-2.0, 2.0, 1.0))
-        .lookat(Vec3::new(0.0, 0.0, -1.0))
+        .lookfrom(lookfrom)
+        .lookat(lookat)
         .up(Vec3::new(0.0, 1.0, 0.0))
-        .vfov(20.0);
+        .vfov(20.0)
+        .lens(2.0, (lookfrom - lookat).length());
 
     // World
     let mut world = World::new();

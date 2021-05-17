@@ -1,6 +1,8 @@
 use std::io;
 use std::io::Write;
 
+use rayon::prelude::*;
+
 mod ppm;
 use ppm::Image;
 
@@ -145,23 +147,27 @@ fn main() -> io::Result<()> {
         eprint!("\r>> Scanlines remaining: {:width$}", j, width = 5);
         io::stdout().flush()?;
 
-        for i in 0..img.width() {
-            let mut color = Color::new(0.0, 0.0, 0.0);
+        let scanline: Vec<Color> = (0..img.width())
+            .into_par_iter()
+            .map(|i| {
+                let mut color = Color::new(0.0, 0.0, 0.0);
 
-            // For each pixel, we send RAY_SAMPLES_PER_PIXEL number of rays and essentially average
-            // their color values to get a final pixel color.
-            for _ in 0..RAY_SAMPLES_PER_PIXEL {
-                let u = (i as f64 + rtweekend::random(0.0..1.0)) / ((img.width() - 1) as f64);
-                let v = (j as f64 + rtweekend::random(0.0..1.0)) / ((img.height() - 1) as f64);
-                let ray = camera.ray(u, v);
-                color = color + ray_color(&ray, &world, RAY_MAX_DEPTH);
-            }
+                // For each pixel, we send RAY_SAMPLES_PER_PIXEL number of rays and essentially average
+                // their color values to get a final pixel color.
+                for _ in 0..RAY_SAMPLES_PER_PIXEL {
+                    let u = (i as f64 + rtweekend::random(0.0..1.0)) / ((img.width() - 1) as f64);
+                    let v = (j as f64 + rtweekend::random(0.0..1.0)) / ((img.height() - 1) as f64);
+                    let ray = camera.ray(u, v);
+                    color = color + ray_color(&ray, &world, RAY_MAX_DEPTH);
+                }
 
-            // divide the color by the number of samples
-            let scale = 1.0 / RAY_SAMPLES_PER_PIXEL as f64;
-            color = color * scale;
+                // divide the color by the number of samples
+                color / RAY_SAMPLES_PER_PIXEL as f64
+            })
+            .collect();
 
-            img[j][i] = color;
+        for i in 0..scanline.len() {
+            img[j][i] = scanline[i];
         }
     }
     eprintln!("\n>> Render done");

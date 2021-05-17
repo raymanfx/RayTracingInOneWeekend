@@ -70,9 +70,9 @@ fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
     let t_min = 0.001;
     let t_max = std::f64::MAX;
 
-    if let Some((rec, object)) = world.trace(ray, t_min, t_max) {
+    if let Some((rec, material)) = world.trace(ray, t_min, t_max) {
         // scatter the light ray
-        if let Some((scatter, attenuation)) = object.material().scatter(ray, &rec) {
+        if let Some((scatter, attenuation)) = material.scatter(ray, &rec) {
             let mut scatter_color = ray_color(&scatter, world, depth - 1);
             // consider attenuation of the object
             scatter_color[0] = scatter_color[0] * attenuation[0];
@@ -111,49 +111,31 @@ fn main() -> io::Result<()> {
         ">> Viewport: {} (W) x {} (H)",
         VIEWPORT_WIDTH, VIEWPORT_HEIGHT
     );
-    let lookfrom = Vec3::new(3.0, 3.0, 2.0);
-    let lookat = Vec3::new(0.0, 0.0, -1.0);
     let camera = Camera::new(VIEWPORT_WIDTH, VIEWPORT_HEIGHT)
-        .lookfrom(lookfrom)
-        .lookat(lookat)
+        .lookfrom(Vec3::new(-2.0, 2.0, 1.0))
+        .lookat(Vec3::new(0.0, 0.0, -1.0))
         .up(Vec3::new(0.0, 1.0, 0.0))
-        .vfov(20.0)
-        .lens(2.0, (lookfrom - lookat).length());
+        .vfov(20.0);
 
     // World
     let mut world = World::new();
-    let sphere_ground = Sphere::new(
-        Point3::new(0.0, -100.5, -1.0),
-        100.0,
-        material::Lambertian::new(Color::new(0.8, 0.8, 0.0)),
-    );
-    let sphere_center = Sphere::new(
-        Point3::new(0.0, 0.0, -1.0),
-        0.5,
-        material::Lambertian::new(Color::new(0.1, 0.2, 0.5)),
-    );
-    let sphere_left = Sphere::new(
-        Point3::new(-1.0, 0.0, -1.0),
-        0.5,
-        material::Dielectric::new(1.5),
-    );
-    let sphere_left_inner = Sphere::new(
-        Point3::new(-1.0, 0.0, -1.0),
-        -0.45,
-        material::Dielectric::new(1.5),
-    );
-    let sphere_right = Sphere::new(
-        Point3::new(1.0, 0.0, -1.0),
-        0.5,
-        material::Metal::new(Color::new(0.8, 0.6, 0.2), 0.0),
-    );
+    let sphere_ground = Sphere::new(Point3::new(0.0, -100.5, -1.0), 100.0);
+    let sphere_ground_mat = material::Lambertian::new(Color::new(0.8, 0.8, 0.0));
+    let sphere_center = Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5);
+    let sphere_center_mat = material::Lambertian::new(Color::new(0.1, 0.2, 0.5));
+    let sphere_left = Sphere::new(Point3::new(-1.0, 0.0, -1.0), 0.5);
+    let sphere_left_mat = material::Dielectric::new(1.5);
+    let sphere_left_inner = Sphere::new(Point3::new(-1.0, 0.0, -1.0), -0.45);
+    let sphere_left_inner_mat = material::Dielectric::new(1.5);
+    let sphere_right = Sphere::new(Point3::new(1.0, 0.0, -1.0), 0.5);
+    let sphere_right_mat = material::Metal::new(Color::new(0.8, 0.6, 0.2), 0.0);
 
     // add objects to the world
-    world.add(sphere_ground);
-    world.add(sphere_center);
-    world.add(sphere_left);
-    world.add(sphere_left_inner);
-    world.add(sphere_right);
+    world.add(sphere_ground, sphere_ground_mat);
+    world.add(sphere_center, sphere_center_mat);
+    world.add(sphere_left, sphere_left_mat);
+    world.add(sphere_left_inner, sphere_left_inner_mat);
+    world.add(sphere_right, sphere_right_mat);
 
     // create the image buffer
     let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, Color::new(0.0, 0.0, 0.0));

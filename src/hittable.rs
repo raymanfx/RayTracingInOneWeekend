@@ -1,6 +1,5 @@
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-use crate::material::Material;
 use crate::ray::{Point3, Ray};
 use crate::vec3::Vec3;
 
@@ -11,9 +10,6 @@ pub trait Hittable<T: Copy> {
     /// * `t_min`: Minimum depth of the ray.
     /// * `t_max`: Maxmimum depth of the ray.
     fn is_hit(&self, ray: &Ray<T>, t_min: T, t_max: T) -> Option<HitRecord<T>>;
-
-    /// Returns the material of the object.
-    fn material(&self) -> &dyn Material<T>;
 }
 
 pub struct HitRecord<T: Copy> {

@@ -3,7 +3,7 @@ use std::cmp::PartialOrd;
 use rand::distributions::uniform::{SampleRange, SampleUniform};
 use rand::Rng;
 
-use crate::vec3::Vec3;
+use crate::vec::Vec3;
 
 /// Convert degrees to radians
 pub fn degrees_to_radians(degrees: f64) -> f64 {
@@ -38,7 +38,7 @@ pub fn random_vec_in_unit_sphere() -> Vec3<f64> {
         let x = random(-1.0..1.0);
         let y = random(-1.0..1.0);
         let z = random(-1.0..1.0);
-        let vec = Vec3::new(x, y, z);
+        let vec = Vec3::new3(x, y, z);
 
         if vec.length_squared() >= 1.0 {
             // vector is not inside the unit sphere, continue the search

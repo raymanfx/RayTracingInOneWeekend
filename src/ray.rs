@@ -1,6 +1,6 @@
 use std::ops;
 
-use crate::vec3::Vec3;
+use crate::vec::Vec3;
 
 /// A point in 3D space.
 pub type Point3<T> = Vec3<T>;

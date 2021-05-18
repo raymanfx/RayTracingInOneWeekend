@@ -1,6 +1,6 @@
 use crate::ray::{Point3, Ray};
 use crate::rtweekend;
-use crate::vec3::Vec3;
+use crate::vec::Vec3;
 
 /// Simple virtual camera.
 pub struct Camera {
@@ -49,11 +49,11 @@ impl Camera {
     /// * `focal_length` - Focal length.
     pub fn new(width: f64, height: f64) -> Self {
         // "eye" of the scene aka camera center
-        let lookfrom: Vec3<f64> = Vec3::new(0.0, 0.0, 0.0);
+        let lookfrom: Vec3<f64> = Vec3::new3(0.0, 0.0, 0.0);
         // point that we look at
-        let lookat: Vec3<f64> = Vec3::new(0.0, 0.0, -1.0);
+        let lookat: Vec3<f64> = Vec3::new3(0.0, 0.0, -1.0);
         // a vector that points straight into the sky (perpendicular to the ground)
-        let up: Vec3<f64> = Vec3::new(0.0, 1.0, 0.0);
+        let up: Vec3<f64> = Vec3::new3(0.0, 1.0, 0.0);
 
         // default vertical FOV: 90 degrees, so that h = 1
         let vfov = rtweekend::degrees_to_radians(90.0);
@@ -71,12 +71,12 @@ impl Camera {
             lookfrom,
             lookat,
             up,
-            w: Vec3::new(0.0, 0.0, 0.0),
-            u: Vec3::new(0.0, 0.0, 0.0),
-            v: Vec3::new(0.0, 0.0, 0.0),
-            lower_left_corner: Vec3::new(0.0, 0.0, 0.0),
-            horizontal: Vec3::new(0.0, 0.0, 0.0),
-            vertical: Vec3::new(0.0, 0.0, 0.0),
+            w: Vec3::new3(0.0, 0.0, 0.0),
+            u: Vec3::new3(0.0, 0.0, 0.0),
+            v: Vec3::new3(0.0, 0.0, 0.0),
+            lower_left_corner: Vec3::new3(0.0, 0.0, 0.0),
+            horizontal: Vec3::new3(0.0, 0.0, 0.0),
+            vertical: Vec3::new3(0.0, 0.0, 0.0),
         };
         camera.update_perspective();
 

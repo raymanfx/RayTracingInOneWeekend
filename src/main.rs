@@ -6,8 +6,8 @@ use rayon::prelude::*;
 mod ppm;
 use ppm::Image;
 
-mod vec3;
-use vec3::Vec3;
+mod vec;
+use vec::Vec3;
 
 mod ray;
 use ray::{Point3, Ray};
@@ -63,7 +63,7 @@ fn write_color(color: &Color) {
 fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
     if depth == 0 {
         // ray bounce limit exceeded, no more light is reflected
-        return Color::new(0.0, 0.0, 0.0);
+        return Color::new3(0.0, 0.0, 0.0);
     }
 
     // Fix shadow acne: due to floating point approximation, some of the reflected rays hit the
@@ -83,7 +83,7 @@ fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
             return scatter_color;
         } else {
             // no light is reflected
-            return Color::new(0.0, 0.0, 0.0);
+            return Color::new3(0.0, 0.0, 0.0);
         }
     }
 
@@ -92,8 +92,8 @@ fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
     // scale t so 0.0 <= t <= 1.0
     let t = 0.5 * (unit_direction.y() + 1.0);
     // linear blend aka interpolation between white and blue
-    let white = Color::new(1.0, 1.0, 1.0);
-    let blue = Color::new(0.5, 0.7, 1.0);
+    let white = Color::new3(1.0, 1.0, 1.0);
+    let blue = Color::new3(0.5, 0.7, 1.0);
     white * (1.0 - t) + blue * t
 }
 
@@ -101,19 +101,19 @@ fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
 fn random_scene() -> World<f64> {
     let mut world = World::new();
 
-    let sphere_ground = Sphere::new(Point3::new(0.0, -1000.0, 0.0), 1000.0);
-    let sphere_ground_mat = material::Lambertian::new(Color::new(0.5, 0.5, 0.5));
+    let sphere_ground = Sphere::new(Point3::new3(0.0, -1000.0, 0.0), 1000.0);
+    let sphere_ground_mat = material::Lambertian::new(Color::new3(0.5, 0.5, 0.5));
     world.add(sphere_ground, sphere_ground_mat);
 
     for a in -11..11 {
         for b in -11..11 {
             let random = rtweekend::random(0.0..1.0);
-            let center = Point3::new(a as f64 + 0.9 * random, 0.2, b as f64 + 0.9 * random);
+            let center = Point3::new3(a as f64 + 0.9 * random, 0.2, b as f64 + 0.9 * random);
 
-            if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+            if (center - Point3::new3(4.0, 0.2, 0.0)).length() > 0.9 {
                 if random < 0.8 {
                     // diffuse
-                    let albedo = Color::new(
+                    let albedo = Color::new3(
                         rtweekend::random(0.0..1.0) * rtweekend::random(0.0..1.0),
                         rtweekend::random(0.0..1.0) * rtweekend::random(0.0..1.0),
                         rtweekend::random(0.0..1.0) * rtweekend::random(0.0..1.0),
@@ -123,7 +123,7 @@ fn random_scene() -> World<f64> {
                     world.add(sphere, material);
                 } else if random < 0.95 {
                     // metal
-                    let albedo = Color::new(
+                    let albedo = Color::new3(
                         rtweekend::random(0.5..1.0),
                         rtweekend::random(0.5..1.0),
                         rtweekend::random(0.5..1.0),
@@ -143,15 +143,15 @@ fn random_scene() -> World<f64> {
     }
 
     let material = material::Dielectric::new(1.5);
-    let sphere = Sphere::new(Point3::new(0.0, 1.0, 0.0), 1.0);
+    let sphere = Sphere::new(Point3::new3(0.0, 1.0, 0.0), 1.0);
     world.add(sphere, material);
 
-    let material = material::Lambertian::new(Color::new(0.4, 0.2, 0.1));
-    let sphere = Sphere::new(Point3::new(-4.0, 1.0, 0.0), 1.0);
+    let material = material::Lambertian::new(Color::new3(0.4, 0.2, 0.1));
+    let sphere = Sphere::new(Point3::new3(-4.0, 1.0, 0.0), 1.0);
     world.add(sphere, material);
 
-    let material = material::Metal::new(Color::new(0.7, 0.6, 0.5), 0.0);
-    let sphere = Sphere::new(Point3::new(4.0, 1.0, 0.0), 1.0);
+    let material = material::Metal::new(Color::new3(0.7, 0.6, 0.5), 0.0);
+    let sphere = Sphere::new(Point3::new3(4.0, 1.0, 0.0), 1.0);
     world.add(sphere, material);
 
     world
@@ -174,9 +174,9 @@ fn main() -> io::Result<()> {
         VIEWPORT_WIDTH, VIEWPORT_HEIGHT
     );
     let camera = Camera::new(VIEWPORT_WIDTH, VIEWPORT_HEIGHT)
-        .lookfrom(Vec3::new(13.0, 2.0, 3.0))
-        .lookat(Vec3::new(0.0, 0.0, 0.0))
-        .up(Vec3::new(0.0, 1.0, 0.0))
+        .lookfrom(Vec3::new3(13.0, 2.0, 3.0))
+        .lookat(Vec3::new3(0.0, 0.0, 0.0))
+        .up(Vec3::new3(0.0, 1.0, 0.0))
         .vfov(20.0)
         .lens(0.1, 10.0);
 
@@ -184,7 +184,7 @@ fn main() -> io::Result<()> {
     let world = random_scene();
 
     // create the image buffer
-    let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, Color::new(0.0, 0.0, 0.0));
+    let mut img = Image::new(IMAGE_WIDTH, IMAGE_HEIGHT, Color::new3(0.0, 0.0, 0.0));
 
     // fill image with test data
     for j in (0..img.height()).rev() {
@@ -194,7 +194,7 @@ fn main() -> io::Result<()> {
         let scanline: Vec<Color> = (0..img.width())
             .into_par_iter()
             .map(|i| {
-                let mut color = Color::new(0.0, 0.0, 0.0);
+                let mut color = Color::new3(0.0, 0.0, 0.0);
 
                 // For each pixel, we send RAY_SAMPLES_PER_PIXEL number of rays and essentially average
                 // their color values to get a final pixel color.

@@ -1,7 +1,7 @@
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 use crate::ray::{Point3, Ray};
-use crate::vec3::Vec3;
+use crate::vec::Vec3;
 
 pub trait Hittable<T: Copy> {
     /// Test whether the object is hit by an incoming ray.

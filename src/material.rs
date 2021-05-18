@@ -4,7 +4,7 @@ use crate::color::Color;
 use crate::hittable::HitRecord;
 use crate::ray::Ray;
 use crate::rtweekend;
-use crate::vec3::Vec3;
+use crate::vec::Vec3;
 
 /// Generic material trait.
 pub trait Material<T: Copy> {
@@ -301,7 +301,7 @@ impl Material<f64> for Dielectric {
         };
         let scatter = Ray::new(rec.point, direction);
         // attenuation is always 1 since air/glass/diamond do not absorb
-        let attenuation = Color::new(1.0, 1.0, 1.0);
+        let attenuation = Color::new3(1.0, 1.0, 1.0);
 
         Some((scatter, attenuation))
     }

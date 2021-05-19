@@ -3,6 +3,8 @@ use std::io::Write;
 
 use rayon::prelude::*;
 
+use minifb::{Window, WindowOptions};
+
 mod ppm;
 use ppm::Image;
 
@@ -35,7 +37,7 @@ mod material;
 /// We perform two steps:
 ///     1. Gamma correction using gamma=2
 ///     2. Color value mapping from [0.0, 1.0] to [0, 255]
-fn write_color(color: &Color) {
+fn color_to_rgb8(color: &Color) -> [u8; 3] {
     let mut r = color.x();
     let mut g = color.y();
     let mut b = color.z();
@@ -56,7 +58,7 @@ fn write_color(color: &Color) {
     g = 256.0 * g;
     b = 256.0 * b;
 
-    println!("{} {} {}", r as u8, g as u8, b as u8);
+    [r as u8, g as u8, b as u8]
 }
 
 /// Compute the color of pixel hit by a ray.
@@ -73,6 +75,13 @@ fn ray_color(ray: &Ray<f64>, world: &World<f64>, depth: usize) -> Color {
     let t_max = std::f64::MAX;
 
     if let Some((rec, material)) = world.trace(ray, t_min, t_max) {
+        // DEBUG: surface normal shading
+        //return Color::new3(
+        //    rec.normal.x() + 1.0,
+        //    rec.normal.y() + 1.0,
+        //    rec.normal.z() + 1.0,
+        //) * 0.5;
+
         // scatter the light ray
         if let Some((scatter, attenuation)) = material.scatter(ray, &rec) {
             let mut scatter_color = ray_color(&scatter, world, depth - 1);
@@ -166,6 +175,13 @@ fn main() -> io::Result<()> {
     const RAY_MAX_DEPTH: usize = 50;
     eprintln!(">> Image: {} (W) x {} (H)", IMAGE_WIDTH, IMAGE_HEIGHT);
 
+    // minifb setup
+    #[cfg(feature = "minifb")]
+    let mut window =
+        Window::new("Scene", IMAGE_WIDTH, IMAGE_HEIGHT, WindowOptions::default()).unwrap();
+    #[cfg(feature = "minifb")]
+    let mut buffer = vec![0u32; IMAGE_WIDTH * IMAGE_HEIGHT];
+
     // Camera settings
     const VIEWPORT_HEIGHT: f64 = 2.0;
     const VIEWPORT_WIDTH: f64 = ASPECT_RATIO * VIEWPORT_HEIGHT;
@@ -213,6 +229,21 @@ fn main() -> io::Result<()> {
         for i in 0..scanline.len() {
             img[j][i] = scanline[i];
         }
+
+        #[cfg(feature = "minifb")]
+        {
+            // update minifb buffer and render it
+            let buffer_offset = (IMAGE_HEIGHT - 1 - j) * IMAGE_WIDTH;
+            let buffer_row = &mut buffer[buffer_offset..buffer_offset + IMAGE_WIDTH];
+            for i in 0..scanline.len() {
+                let rgb8 = color_to_rgb8(&scanline[i]);
+                let (r, g, b) = (rgb8[0] as u32, rgb8[1] as u32, rgb8[2] as u32);
+                buffer_row[i] = (r << 16) | (g << 8) | b
+            }
+            window
+                .update_with_buffer(&buffer, IMAGE_WIDTH, IMAGE_HEIGHT)
+                .unwrap();
+        }
     }
     eprintln!("\n>> Render done");
 
@@ -223,8 +254,9 @@ fn main() -> io::Result<()> {
     // print PPM data
     for j in (0..img.height()).rev() {
         for i in 0..img.width() {
-            let pix = img[j][i];
-            write_color(&pix);
+            let color = img[j][i];
+            let rgb8 = color_to_rgb8(&color);
+            println!("{} {} {}", rgb8[0], rgb8[1], rgb8[2]);
         }
     }
 
